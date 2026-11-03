@@ -95,6 +95,8 @@ ul{margin:0;padding-left:18px} li{margin:4px 0}
     <p>Copia el código completo y envíalo por correo a Recursos Humanos de ESCALA. No lo modifiques.</p>
     <textarea class="code" id="code" readonly aria-label="Código de respuestas"></textarea>
     <div class="row" style="margin-top:10px"><button class="btn primary" id="btnCopy">Copiar código</button><button class="btn" id="btnDl">Descargar como archivo</button><span class="small muted" id="copyMsg"></span></div>
+    <details style="margin-top:14px"><summary style="cursor:pointer;font-weight:700">Ver resumen de tus respuestas</summary><div id="resumen" class="small" style="margin-top:8px"></div></details>
+    <div class="row" style="margin-top:18px;border-top:1px solid var(--hair);padding-top:14px"><button class="btn" id="btnReset">Iniciar un examen nuevo en este equipo</button><span class="small muted">Borra este examen del navegador. Copia el código antes.</span></div>
   </section>
 </main>
 <div class="bar hide" id="bar"><div class="wrap">
@@ -144,7 +146,9 @@ function encode(){ const p={v:1,tipo:"ESCALA-EXAMEN-DIRPROY",datos:st.datos,resp
   p.porTiempo=!!st.timeout; p.limite=LIMIT_MIN; return "ESCALA-EX1:"+btoa(unescape(encodeURIComponent(JSON.stringify(p)))); }
 function finish(){ st.fin=st.fin||Date.now(); st.done=true; save();
   $("questions").classList.add("hide"); $("bar").classList.add("hide"); $("sFin").classList.remove("hide");
-  const n=Q.filter(q=>st.ans[q.id]).length; $("finMsg").textContent="Gracias, "+(st.datos.nombre||"")+". Contestaste "+n+" de "+Q.length+" preguntas en "+Math.round((st.fin-st.inicio)/60000)+" minutos.";
+  const n=Q.filter(q=>st.ans[q.id]).length; const mins=Math.max(1,Math.round((st.fin-st.inicio)/60000));
+  $("finMsg").textContent="Gracias, "+(st.datos.nombre||"")+". Contestaste "+n+" de "+Q.length+" preguntas en "+mins+(mins===1?" minuto.":" minutos.");
+  $("resumen").innerHTML="<p style='margin:0 0 6px'><b>"+esc(st.datos.nombre)+"</b> · "+esc(st.datos.correo)+" · "+esc([st.datos.puesto,st.datos.empresa].filter(Boolean).join(", "))+"</p><p style='margin:0;line-height:1.9'>"+Q.map((q,i)=>(i+1)+"-"+(st.ans[q.id]||"—")).join(" &nbsp; ")+"</p>";
   $("code").value=encode(); if(st.timeout) $("timeoutMsg").textContent="Se terminó el tiempo; el examen se entregó automáticamente."; window.scrollTo(0,0); }
 $("btnEnd").onclick=()=>{ const n=prog(); const missing=Q.findIndex(q=>!st.ans[q.id]);
   $("mX").textContent=n<Q.length?("Te faltan "+(Q.length-n)+" preguntas por contestar. Las preguntas sin respuesta cuentan como incorrectas. Después de terminar ya no podrás cambiar respuestas."):"Ya contestaste todas las preguntas. Después de terminar ya no podrás cambiar respuestas.";
@@ -154,6 +158,9 @@ $("mNo").onclick=()=>{ $("modal").classList.remove("on"); const i=Q.findIndex(q=
 $("mYes").onclick=()=>{ $("modal").classList.remove("on"); finish(); };
 $("btnCopy").onclick=async()=>{ try{await navigator.clipboard.writeText($("code").value); $("copyMsg").textContent="Código copiado. Pégalo en un correo para Recursos Humanos.";}
   catch(e){ $("code").select(); $("copyMsg").textContent="Selecciona el código y cópialo con Ctrl+C (Cmd+C en Mac)."; } };
+$("btnReset").onclick=()=>{ $("mT").textContent="Iniciar un examen nuevo"; $("mX").textContent="Se borrarán de este navegador los datos y respuestas de "+(st.datos.nombre||"este examen")+". Asegúrate de haber copiado o descargado el código.";
+  $("mYes").textContent="Borrar e iniciar"; $("mNo").textContent="Cancelar"; $("modal").classList.add("on");
+  $("mYes").onclick=()=>{ try{localStorage.removeItem("escala-examen");}catch(e){} location.reload(); }; $("mNo").onclick=()=>$("modal").classList.remove("on"); };
 $("btnDl").onclick=()=>{ try{ const b=new Blob([$("code").value],{type:"text/plain"}); const a=document.createElement("a"); a.href=URL.createObjectURL(b);
   a.download="Examen_ESCALA_"+String(st.datos.nombre||"candidato").replace(/[^\wÁÉÍÓÚÑáéíóúñ]+/g,"_")+".txt"; document.body.appendChild(a); a.click(); a.remove();
   $("copyMsg").textContent="Si no se descargó, usa Copiar código."; }catch(e){ $("copyMsg").textContent="No se pudo descargar aquí; usa Copiar código."; } };
